@@ -9,8 +9,41 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-pthread_mutex_t = m;
+pthread_mutex_t m;
+pthread_cond_t full, empty;
+
 int num_consumer, num_producer, buffer_size, num_loops;
+int numfull = 0, fillptr = 0, useptr = 0;
+
+int *buffer;
+
+
+void do_fill(int value){
+	buffer[fillptr] = value;
+	fillptr = (fillptr + 1) % buffer_size;
+	numfull++;
+}
+
+int do_get() {
+	int tmp = buffer[useptr];
+	useptr = (useptr + 1) % buffer_size;
+	numfull--;
+	return tmp;
+}
+
+
+void *producer (void *argv){
+
+	int i = 0;
+	for (i; i < num_loops; i++){
+		pthread_mutex_lock(&m);
+		while (numfull == buffer_size){
+
+		}
+	}
+
+}
+
 
 int main (int argc, char* argv[]){
 
@@ -19,22 +52,16 @@ int main (int argc, char* argv[]){
 		exit(0);
 	}
 
+
 	num_consumer = atoi(argv[1]);
 	num_producer = atoi(argv[2]);
 	buffer_size = atoi(argv[3]);
 	num_loops = atoi(argv[4]);
 
+	buffer = (int *) malloc(buffer_size * sizeof(int));
+	
 	printf("%d, %d, %d, %d\n", num_consumer, num_producer, buffer_size, num_loops);
 
 	return 0;
 }
 
-void *producer (void *argv){
-
-	int i = 0;
-	for (i, i < num_loops; i++){
-		pthread_mutex_lock(&m);
-		while (numfull == buffer_size)
-	}
-
-}
