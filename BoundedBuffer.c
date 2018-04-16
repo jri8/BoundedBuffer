@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 pthread_mutex_t m;
 pthread_mutex_t f, g;
@@ -17,6 +18,9 @@ pthread_cond_t fill, empty, inc;
 int num_consumer, num_producer, buffer_size, num_loops;
 int numfull = 0, fillptr = 0, useptr = 0;
 int filled = 0, got = 0;
+int cons_sleep = 0, prod_sleep = 0;
+bool cons_done = false;
+bool prod_done = false;
 
 int *buffer;
 
@@ -35,49 +39,64 @@ int do_get() {
 }
 
 void *consumer (void *arg){
-
-	while(got < num_loops){
+	
+	while(got < num_loops-cons_sleep){
 		pthread_mutex_lock(&m);
-		while (numfull == 0 && got < num_loops){
-	//		printf("consumer %d got = %d\t",(int)pthread_self(),got);
-			printf("\tconsumer %d is waiting\n",(int)pthread_self());
+		while (numfull == 0 && got < num_loops-cons_sleep){
+	//		printf("\tconsumer %d is waiting\n",(int)pthread_self());
+			cons_sleep = cons_sleep + 1;
 			pthread_cond_wait(&fill, &m);
-	//		printf("consumer %d woke up got = %d\n",(int)pthread_self(), got);
+			cons_sleep = cons_sleep -1;
 		}
+		
+		got = got + 1;
 		int tmp = do_get();
-		got++;
+
+	//	cons_done = (got >= num_loops-num_consumer);
+	//	cons_done == false ? printf("cons_done = false\n") : printf("cons_done = true\n");
+
+//			printf("%d\n",tmp);
+		printf("%d %d %d\n", tmp, (int)pthread_self(),got);
+	
 
 		pthread_cond_signal(&empty);
 		pthread_mutex_unlock(&m);
-		printf("%d %d %d\n", tmp, (int)pthread_self(),got);
-
 	}
+//	int i = 0;
+//	printf("%d %d\n", (int)pthread_self(), num_consumer);
+//	for (i; i < num_consumer; i++)
+	//	pthread_cond_signal(&fill);
 
 }
 
 void *producer (void *arg){
-	int i;
-	for(i = 0; i < num_loops; i++){
-	//	printf("producer %d lock m\n", (int)pthread_self());
+	while(filled < num_loops - prod_sleep){
 		pthread_mutex_lock(&m);
-		while (numfull == buffer_size){
-	//		printf("producer %d is waiting\n", (int)pthread_self());
+		while (numfull == buffer_size && filled < num_loops - prod_sleep +1){
+			prod_sleep = prod_sleep + 1;
+	//		printf("producer is waiting %d\n",(int)pthread_self());
 			pthread_cond_wait(&empty, &m);
-
+			prod_sleep = prod_sleep - 1;
 	//		printf("producer %d woke up\n", (int)pthread_self());
 		}
 
-
-		do_fill(i);
-	//	pthread_mutex_lock(&f);
-//		filled++;
-//		pthread_mutex_unlock(&f);
-
-	//	printf("producer %d singal fill\n", (int)pthread_self());
+	//	if (!prod_done){
+				
+				
+		//	printf("%d filled  %d\n", (int)pthread_self(),filled);
+		do_fill(filled);
+		filled++;
+	//	prod_done = (filled >= num_loops);
+	//	prod_done == false ? printf("prod_done = false\n") : printf("prod_done = true\n");
 		pthread_cond_signal(&fill);
-	//	printf("producer %d unlock m\n", (int)pthread_self());
 		pthread_mutex_unlock(&m);
+	//}
+
 	}
+
+//	int i = 0;
+//	for (i; i < prod_sleep; i++)
+//		pthread_cond_signal(&empty);
 
 }
 
